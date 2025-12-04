@@ -1,5 +1,8 @@
 import os
 import gzip
+import time
+import random
+import configparser
 import hashlib
 import http.cookiejar
 import urllib.request
@@ -16,6 +19,22 @@ class FetchRequest:
         self.cookie_ext = kwargs.get('cookie_ext') or '_cookie'
         self.cookie_file = None
         self.cookie = None
+
+        self.jitter_min = 1
+        self.jitter_max = 5
+        self._load_config()
+
+    def _load_config(self):
+        config = configparser.ConfigParser()
+        config_path = 'config.ini'
+        if os.path.exists(config_path):
+            config.read(config_path)
+            if 'settings' in config:
+                try:
+                    self.jitter_min = float(config.get('settings', 'jitter_min', fallback=1))
+                    self.jitter_max = float(config.get('settings', 'jitter_max', fallback=5))
+                except ValueError:
+                    pass
 
     def set_cookie_file(self, url):
         cookieStr = self.cookie_file
@@ -46,6 +65,13 @@ class FetchRequest:
         return self.get_response(response)
 
     def request(self, url, **kwargs):
+        # Jitter delay
+        if self.jitter_max > 0:
+            sleep_time = random.uniform(self.jitter_min, self.jitter_max)
+            if self.debug:
+                print(f'[DEBUG] Sleeping for {sleep_time:.2f} seconds')
+            time.sleep(sleep_time)
+
         method = kwargs.get('method') or 'GET'
         headers = kwargs.get('headers') or {}
         data = kwargs.get('data') or {}
