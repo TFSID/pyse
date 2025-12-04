@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-import threading
+import concurrent.futures
 from logging import DEBUG
 from utils.helper import setup_logger
 from engine.aol import Aol
@@ -43,15 +43,7 @@ def save_links(links, filename='results.txt'):
             current_links.append(link)
 
 
-def engine_tasks(engine, keyword, output=None):
-    links = engine.search(keyword)
-    if output:
-        save_links(links, output)
-    else:
-        save_links(links)
-
-
-def engine_start(keyword, output=None, debug_mode=False):
+def engine_start(keyword, output=None, debug_mode=False, max_workers=5):
     logger.info('Start search with keyword: %s' % keyword)
 
     engines = [
@@ -70,18 +62,19 @@ def engine_start(keyword, output=None, debug_mode=False):
         Yandex(debug=debug_mode),
     ]
 
-    threads = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_engine = {executor.submit(engine.search, keyword): engine for engine in engines}
 
-    for engine in engines:
-        t = threading.Thread(target=engine_tasks, args=(engine, keyword, output))
-        threads.append(t)
-
-    if threads:
-        for thread in threads:
-            thread.start()
-
-        for thread in threads:
-            thread.join()
+        for future in concurrent.futures.as_completed(future_to_engine):
+            engine = future_to_engine[future]
+            try:
+                links = future.result()
+                if output:
+                    save_links(links, output)
+                else:
+                    save_links(links)
+            except Exception as exc:
+                logger.error('%s generated an exception: %s' % (engine.__class__.__name__, exc))
 
 
 def main():
@@ -105,6 +98,12 @@ def main():
                         dest='debug_mode',
                         help='Set DEBUG mode',
                         action='store_true')
+    parser.add_argument('--max-workers',
+                        dest='max_workers',
+                        help='Maximum number of worker threads (default 5)',
+                        default=5,
+                        type=int,
+                        action='store')
 
     args = parser.parse_args()
 
@@ -116,13 +115,15 @@ def main():
         logger.setLevel(DEBUG)
 
     if args.keyword:
-        engine_start(keyword=args.keyword, output=args.output_file, debug_mode=args.debug_mode)
+        engine_start(keyword=args.keyword, output=args.output_file, debug_mode=args.debug_mode,
+                     max_workers=args.max_workers)
     elif args.keyword_list:
         if os.path.exists(args.keyword_list) and os.path.isfile(args.keyword_list):
             with open(args.keyword_list, 'r') as fp:
                 lines = fp.read().splitlines()
                 for line in lines:
-                    engine_start(keyword=line, output=args.output_file, debug_mode=args.debug_mode)
+                    engine_start(keyword=line, output=args.output_file, debug_mode=args.debug_mode,
+                                 max_workers=args.max_workers)
 
 
 if __name__ == '__main__':
