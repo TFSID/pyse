@@ -1,5 +1,6 @@
 import os
 import gzip
+import random
 import hashlib
 import http.cookiejar
 import urllib.request
@@ -63,12 +64,22 @@ class FetchRequest:
         opener = urllib.request.build_opener(handler)
         request = urllib.request.Request(url=url, method=method)
 
+        if not headers:
+            headers = {}
+        else:
+            headers = headers.copy()
+
+        # Case-insensitive check for User-Agent
+        has_user_agent = any(k.lower() == 'user-agent' for k in headers)
+        if self.user_agent and not has_user_agent:
+            headers['User-Agent'] = self.user_agent
+
+        headers = self.add_fake_headers(headers)
+        headers = self.shuffle_headers(headers)
+
         if isinstance(headers, dict):
             for k, v in headers.items():
                 request.add_header(k, v)
-
-        if not request.has_header('User-Agent') and self.user_agent:
-            request.add_header('User-Agent', self.user_agent)
 
         if isinstance(data, dict):
             request.data = urllib.parse.urlencode(data).encode()
@@ -98,3 +109,38 @@ class FetchRequest:
                 print('_response error', err)
 
         return
+
+    @staticmethod
+    def shuffle_headers(headers):
+        if not isinstance(headers, dict):
+            return headers
+
+        keys = list(headers.keys())
+        random.shuffle(keys)
+        return {k: headers[k] for k in keys}
+
+    @staticmethod
+    def add_fake_headers(headers):
+        fake_headers = {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'DNT': '1',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+
+        # Select a random subset of fake headers to add (1 to 3 headers)
+        num_fake = random.randint(1, 3)
+        headers_to_add = random.sample(list(fake_headers.keys()), min(num_fake, len(fake_headers)))
+
+        lower_keys = {k.lower() for k in headers.keys()}
+
+        for key in headers_to_add:
+            if key.lower() not in lower_keys:
+                headers[key] = fake_headers[key]
+
+        return headers
