@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.error
 import socket
 from utils.helper import split_url, dir_exist, file_exist, random_agent, decode_bytes
+from utils.static import config
 
 
 def fetch_url(url, method='GET', headers=None, data=None, timeout=10, cookie_file=None):
@@ -74,7 +75,7 @@ class FetchRequest:
     def __init__(self, **kwargs):
         self.debug = kwargs.get('debug') or False
         self.user_agent = kwargs.get('user_agent') or random_agent()
-        self.timeout = kwargs.get('timeout') or 10
+        self.timeout = kwargs.get('timeout') or config.getint('DEFAULT', 'timeout')
         self.cookie_dir = kwargs.get('cookie_dir') or 'cookie'
         self.cookie_ext = kwargs.get('cookie_ext') or '_cookie'
         self.cookie_file = None

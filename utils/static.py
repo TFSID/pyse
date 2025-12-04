@@ -1,3 +1,6 @@
+import configparser
+import os
+
 list_charset = [
     'ascii', 'utf_8', 'iso8859_1', 'latin_1', 'big5', 'utf_8_sig', 'utf_16', 'utf_16_be', 'utf_16_le', 'utf_32',
     'utf_32_be', 'utf_32_le', 'utf_7', 'iso8859_2', 'iso8859_3', 'iso8859_4', 'iso8859_5', 'iso8859_6', 'iso8859_7',
@@ -175,3 +178,16 @@ domain_tlds = [
     'yachts', 'yahoo', 'yamaxun', 'yandex', 'ye', 'yodobashi', 'yoga', 'yokohama', 'you', 'youtube', 'yt',
     'yun', 'za', 'zappos', 'zara', 'zero', 'zip', 'zm', 'zone', 'zuerich', 'zw'
 ]
+
+# Config loader
+def get_config():
+    defaults = {
+        'timeout': '10',
+        'max_workers': '5'
+    }
+    config = configparser.ConfigParser(defaults=defaults)
+    if os.path.exists('config.ini'):
+        config.read('config.ini')
+    return config
+
+config = get_config()
