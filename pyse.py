@@ -51,23 +51,23 @@ def engine_tasks(engine, keyword, output=None):
         save_links(links)
 
 
-def engine_start(keyword, output=None, debug_mode=False):
+def engine_start(keyword, output=None, debug_mode=False, cookie_file=None):
     logger.info('Start search with keyword: %s' % keyword)
 
     engines = [
-        Aol(debug=debug_mode),
-        Ask(debug=debug_mode),
-        Bing(debug=debug_mode),
-        GetSearchInfo(debug=debug_mode),
-        Gigablast(debug=debug_mode),
-        Google(debug=debug_mode),
-        Lycos(debug=debug_mode),
-        MetaGer(debug=debug_mode),
-        Mojeek(debug=debug_mode),
-        Naver(debug=debug_mode),
-        Seznam(debug=debug_mode),
-        Yahoo(debug=debug_mode),
-        Yandex(debug=debug_mode),
+        Aol(debug=debug_mode, cookie_file=cookie_file),
+        Ask(debug=debug_mode, cookie_file=cookie_file),
+        Bing(debug=debug_mode, cookie_file=cookie_file),
+        GetSearchInfo(debug=debug_mode, cookie_file=cookie_file),
+        Gigablast(debug=debug_mode, cookie_file=cookie_file),
+        Google(debug=debug_mode, cookie_file=cookie_file),
+        Lycos(debug=debug_mode, cookie_file=cookie_file),
+        MetaGer(debug=debug_mode, cookie_file=cookie_file),
+        Mojeek(debug=debug_mode, cookie_file=cookie_file),
+        Naver(debug=debug_mode, cookie_file=cookie_file),
+        Seznam(debug=debug_mode, cookie_file=cookie_file),
+        Yahoo(debug=debug_mode, cookie_file=cookie_file),
+        Yandex(debug=debug_mode, cookie_file=cookie_file),
     ]
 
     threads = []
@@ -105,6 +105,11 @@ def main():
                         dest='debug_mode',
                         help='Set DEBUG mode',
                         action='store_true')
+    parser.add_argument('-c', '--cookie-file',
+                        dest='cookie_file',
+                        help='Cookie file (default cookies.txt)',
+                        default='cookies.txt',
+                        action='store')
 
     args = parser.parse_args()
 
@@ -116,13 +121,13 @@ def main():
         logger.setLevel(DEBUG)
 
     if args.keyword:
-        engine_start(keyword=args.keyword, output=args.output_file, debug_mode=args.debug_mode)
+        engine_start(keyword=args.keyword, output=args.output_file, debug_mode=args.debug_mode, cookie_file=args.cookie_file)
     elif args.keyword_list:
         if os.path.exists(args.keyword_list) and os.path.isfile(args.keyword_list):
             with open(args.keyword_list, 'r') as fp:
                 lines = fp.read().splitlines()
                 for line in lines:
-                    engine_start(keyword=line, output=args.output_file, debug_mode=args.debug_mode)
+                    engine_start(keyword=line, output=args.output_file, debug_mode=args.debug_mode, cookie_file=args.cookie_file)
 
 
 if __name__ == '__main__':

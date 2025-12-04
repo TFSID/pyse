@@ -13,10 +13,10 @@ class Aol:
     base_url = 'https://www.aol.com'
     search_url = 'https://search.aol.com'
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, cookie_file=None):
         self.debug = debug
         self.query = {}
-        self.fetch = FetchRequest()
+        self.fetch = FetchRequest(cookie_file=cookie_file)
         self.filtering = True
 
         if self.debug:
