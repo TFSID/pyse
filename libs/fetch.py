@@ -4,13 +4,14 @@ import hashlib
 import http.cookiejar
 import urllib.request
 import urllib.parse
+from utils.static import get_random_user_agent
 from utils.helper import split_url, dir_exist, file_exist, random_agent, decode_bytes
 
 
 class FetchRequest:
     def __init__(self, **kwargs):
         self.debug = kwargs.get('debug') or False
-        self.user_agent = kwargs.get('user_agent') or random_agent()
+        self.user_agent = kwargs.get('user_agent') or get_random_user_agent()
         self.timeout = kwargs.get('timeout') or 10
         self.cookie_dir = kwargs.get('cookie_dir') or 'cookie'
         self.cookie_ext = kwargs.get('cookie_ext') or '_cookie'
