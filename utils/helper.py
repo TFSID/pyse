@@ -2,7 +2,7 @@ import os
 import re
 import random
 import logging
-from utils.static import list_charset, domain_tlds, user_agent_list
+from utils.static import list_charset, domain_tlds, get_random_user_agent
 
 
 def setup_logger(name=None, level='info'):
@@ -294,4 +294,4 @@ def unescape_url(url):
 
 
 def random_agent():
-    return random.choice(user_agent_list)
+    return get_random_user_agent()
