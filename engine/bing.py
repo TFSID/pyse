@@ -11,9 +11,9 @@ logger = setup_logger(name='Bing')
 class Bing:
     base_url = 'https://www.bing.com'
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, cookie_file=None):
         self.debug = debug
-        self.fetch = FetchRequest()
+        self.fetch = FetchRequest(cookie_file=cookie_file)
         self.query = {}
         self.filtering = True
 

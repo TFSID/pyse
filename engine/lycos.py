@@ -13,9 +13,9 @@ class Lycos:
     base_url = 'https://www.lycos.com'
     search_url = 'https://search.lycos.com/web'
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, cookie_file=None):
         self.debug = debug
-        self.fetch = FetchRequest()
+        self.fetch = FetchRequest(cookie_file=cookie_file)
         self.query = {}
         self.filtering = True
 

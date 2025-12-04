@@ -1,39 +1,29 @@
 import os
 import gzip
-import hashlib
+import threading
 import http.cookiejar
 import urllib.request
 import urllib.parse
-from utils.helper import split_url, dir_exist, file_exist, random_agent, decode_bytes
+from utils.helper import random_agent, decode_bytes
 
 
 class FetchRequest:
+    _cookie_lock = threading.Lock()
+
     def __init__(self, **kwargs):
         self.debug = kwargs.get('debug') or False
         self.user_agent = kwargs.get('user_agent') or random_agent()
         self.timeout = kwargs.get('timeout') or 10
-        self.cookie_dir = kwargs.get('cookie_dir') or 'cookie'
-        self.cookie_ext = kwargs.get('cookie_ext') or '_cookie'
-        self.cookie_file = None
-        self.cookie = None
+        self.cookie_file = kwargs.get('cookie_file') or 'cookies.txt'
 
-    def set_cookie_file(self, url):
-        cookieStr = self.cookie_file
-
-        spliturl = split_url(url)
-        if spliturl.get('url'):
-            cookieStr = '%s%s' % (spliturl.get('scheme'), spliturl.get('domain'))
-
-        cookieName = hashlib.md5(cookieStr.encode()).hexdigest()
-        cookieFile = '%s%s' % (cookieName, self.cookie_ext)
-
-        if file_exist(self.cookie_dir):
-            os.remove(self.cookie_dir)
-
-        if not dir_exist(self.cookie_dir):
-            os.mkdir(self.cookie_dir)
-
-        self.cookie_file = os.path.join(self.cookie_dir, cookieFile)
+        self.cookie_jar = http.cookiejar.LWPCookieJar(self.cookie_file)
+        if os.path.exists(self.cookie_file):
+            try:
+                with self._cookie_lock:
+                    self.cookie_jar.load(ignore_discard=True, ignore_expires=True)
+            except Exception as e:
+                if self.debug:
+                    print(f"Error loading cookies: {e}")
 
     def get(self, url, headers=None):
         response = self.request(url=url, method='GET', headers=headers)
@@ -50,16 +40,7 @@ class FetchRequest:
         headers = kwargs.get('headers') or {}
         data = kwargs.get('data') or {}
 
-        self.set_cookie_file(url)
-
-        # https://developpaper.com/python-cookie-read-and-save-method/
-        if file_exist(self.cookie_file):
-            cookie = http.cookiejar.MozillaCookieJar()
-            cookie.load(self.cookie_file, ignore_discard=True, ignore_expires=True)
-        else:
-            cookie = http.cookiejar.MozillaCookieJar(self.cookie_file)
-
-        handler = urllib.request.HTTPCookieProcessor(cookie)
+        handler = urllib.request.HTTPCookieProcessor(self.cookie_jar)
         opener = urllib.request.build_opener(handler)
         request = urllib.request.Request(url=url, method=method)
 
@@ -75,7 +56,14 @@ class FetchRequest:
 
         try:
             response = opener.open(request, timeout=self.timeout)
-            cookie.save(self.cookie_file, ignore_discard=True, ignore_expires=True)
+            with self._cookie_lock:
+                if os.path.exists(self.cookie_file):
+                    try:
+                        self.cookie_jar.load(ignore_discard=True, ignore_expires=True)
+                    except Exception as e:
+                        if self.debug:
+                            print(f"Error loading cookies during save: {e}")
+                self.cookie_jar.save(ignore_discard=True, ignore_expires=True)
 
             return response
         except Exception as err:
