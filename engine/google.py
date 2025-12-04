@@ -5,6 +5,7 @@ from urllib.parse import urljoin, urlencode
 from utils.blacklist import is_blacklisted
 from utils.helper import setup_logger, validate_url, random_agent
 from libs.fetch import FetchRequest
+from libs.html_parser import NativeHTMLParser
 
 logger = setup_logger(name='Google')
 
@@ -147,12 +148,14 @@ class Google:
         if not html:
             return result
 
-        patern_links = r'(?:<a[^>]+data-ved[\s=]+[^>]+>)'
+        # patern_links = r'(?:<a[^>]+data-ved[\s=]+[^>]+>)'
+        # Using NativeHTMLParser to find links with data-ved attribute
+        matches = NativeHTMLParser.find_by_attr(html, 'a', 'data-ved', r'.*')
+
         patern_href = r'href[\s=]+((?:")(.*?)(?:")|(?:\')(.*?)(?:\'))'
         patern_google_cache = r'(https?://)webcache\.googleusercontent\.[^\/]+/search\?q=cache:[^:]+:' \
                               r'(https?://)?(.+?)(\+?(&cd=[^&]+)(&hl=[^&]+)?(&ct=[^&]+)?(&gl=[^&]+)?.*)'
 
-        matches = re.findall(patern_links, str(html), re.M | re.I)
         for match in matches:
             href = re.search(patern_href, match, re.I)
 
@@ -178,12 +181,14 @@ class Google:
         if not html:
             return next_page
 
-        patern_next = r'(?:<a[^>]+id[\s=]+((?:")pnnext(?:")|(?:\')pnnext(?:\'))[^>]+>)'
+        # patern_next = r'(?:<a[^>]+id[\s=]+((?:")pnnext(?:")|(?:\')pnnext(?:\'))[^>]+>)'
+        # Using NativeHTMLParser to find next page link with id="pnnext"
+        matches = NativeHTMLParser.find_by_attr(html, 'a', 'id', r'pnnext')
+
         patern_href = r'href[\s=]+((?:")(.*?)(?:")|(?:\')(.*?)(?:\'))'
 
-        matches = re.search(patern_next, str(html), re.M | re.I)
         if matches:
-            href = re.search(patern_href, matches.group(0), re.I)
+            href = re.search(patern_href, matches[0], re.I)
             if href and len(href.groups()) >= 3:
                 path = href.group(3) or href.group(2)
                 next_page = validate_url(urljoin(self.base_url, path))
