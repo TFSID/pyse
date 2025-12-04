@@ -2,21 +2,12 @@ import os
 import sys
 import argparse
 import threading
+import importlib
+import pkgutil
+import inspect
 from logging import DEBUG
 from utils.helper import setup_logger
-from engine.aol import Aol
-from engine.ask import Ask
-from engine.bing import Bing
-from engine.getsearchinfo import GetSearchInfo
-from engine.gigablast import Gigablast
-from engine.google import Google
-from engine.lycos import Lycos
-from engine.metager import MetaGer
-from engine.mojeek import Mojeek
-from engine.naver import Naver
-from engine.seznam import Seznam
-from engine.yahoo import Yahoo
-from engine.yandex import Yandex
+import engine
 
 logger = setup_logger()
 
@@ -51,24 +42,44 @@ def engine_tasks(engine, keyword, output=None):
         save_links(links)
 
 
+def load_engines(debug_mode=False):
+    """
+    Dynamically load all engines from the engine directory.
+    """
+    engines = []
+    package_path = engine.__path__
+    prefix = engine.__name__ + "."
+
+    for _, name, _ in pkgutil.iter_modules(package_path, prefix):
+        try:
+            module = importlib.import_module(name)
+            # Find classes in the module
+            for member_name, obj in inspect.getmembers(module):
+                if inspect.isclass(obj):
+                    # Check if the class is defined in this module (not imported)
+                    if obj.__module__ == name:
+                        # Assumption: The class name corresponds to the engine name
+                        # and it has a 'search' method.
+                        if hasattr(obj, 'search'):
+                            try:
+                                instance = obj(debug=debug_mode)
+                                engines.append(instance)
+                            except Exception as e:
+                                logger.error(f"Failed to instantiate engine {member_name} from {name}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load module {name}: {e}")
+
+    return engines
+
+
 def engine_start(keyword, output=None, debug_mode=False):
     logger.info('Start search with keyword: %s' % keyword)
 
-    engines = [
-        Aol(debug=debug_mode),
-        Ask(debug=debug_mode),
-        Bing(debug=debug_mode),
-        GetSearchInfo(debug=debug_mode),
-        Gigablast(debug=debug_mode),
-        Google(debug=debug_mode),
-        Lycos(debug=debug_mode),
-        MetaGer(debug=debug_mode),
-        Mojeek(debug=debug_mode),
-        Naver(debug=debug_mode),
-        Seznam(debug=debug_mode),
-        Yahoo(debug=debug_mode),
-        Yandex(debug=debug_mode),
-    ]
+    engines = load_engines(debug_mode)
+
+    if not engines:
+        logger.error("No engines loaded.")
+        return
 
     threads = []
 
